@@ -1,0 +1,24 @@
+{
+  "name": "parkinglotterybot",
+  "version": "0.0.1",
+  "description": "Parking Lottery Bot for Slack",
+  "main": "index.js",
+  "dependencies": {
+    "botkit": "^0.2.2",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pederjohnsen/ParkingLotteryBot.git"
+  },
+  "author": "Peder Johnsen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pederjohnsen/ParkingLotteryBot/issues"
+  },
+  "homepage": "https://github.com/pederjohnsen/ParkingLotteryBot#readme"
+}
