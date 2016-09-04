@@ -1,4 +1,4 @@
 module.exports =
     parkingSpaces: 5
-    weeksBetweenWins: 2
+    weeksBetweenWins: 1
     admins: ['pederjohnsen', 'nat', 'sabrina']
