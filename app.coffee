@@ -113,14 +113,14 @@ bot.startRTM (err, bot, payload) ->
             updateUserIfExists
         ], (err) ->
             if err
-                bot.botkit.log('Failed to add user to parking lottery.', err)
+                bot.botkit.log('Failed to remove user from parking lottery.', err)
             else
                 if !data.user
                     bot.reply message, "I can't remove you from the parking lottery as you've yet to join!"
                 else
                     bot.reply message, "I've removed you from the parking lottery! You can join back anytime."
 
-    controller.hears ['current', 'this week'], 'direct_mention,mention', (bot, message) ->
+    controller.hears ['current', 'current week', 'this week'], 'direct_mention,mention', (bot, message) ->
         {currentWeek, currentYear} = getCurrentWeekDates()
 
         controller.storage.users.all (err, users) ->
