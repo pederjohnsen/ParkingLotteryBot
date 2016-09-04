@@ -34,8 +34,8 @@ bot.startRTM (err, bot, payload) ->
                 bot.botkit.log('Failed to start conversation.', err)
             else
                 convo.say "I'm the parking lottery bot."
-                convo.say "You can join by typing @parkinglottery join & leave by typing @parkinglottery leave."
-                convo.say "Typing @parkinglottery current tells you the current weeks winners, typing @parkinglottery next tells you the upcoming weeks winners."
+                convo.say "You can join by typing 'join @parkinglottery' & leave by typing 'leave @parkinglottery'."
+                convo.say "Typing 'current @parkinglottery' tells you the current weeks winners, typing 'upcoming @parkinglottery' tells you the upcoming weeks winners."
 
     controller.hears ['join'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
