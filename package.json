@@ -4,7 +4,9 @@
   "description": "Parking Lottery Bot for Slack",
   "main": "index.js",
   "dependencies": {
+    "async": "^2.0.1",
     "botkit": "^0.2.2",
+    "moment": "^2.14.1",
     "underscore": "^1.8.3"
   },
   "devDependencies": {},
