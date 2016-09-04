@@ -163,16 +163,44 @@ bot.startRTM (err, bot, payload) ->
 
         data = {}
 
+        getCallerUser = (next) ->
+            controller.storage.users.get message.user, (err, user) ->
+                if err
+                    bot.botkit.log('Failed to get user data.', err)
+
+                data.user = user
+                next null
+
+        maybeGetCallerUserFromSlack = (next) ->
+            if data.user
+                return next null
+
+            bot.api.users.info
+                user: message.user
+            , (err, response) ->
+                if err
+                    return next err
+
+                data.user =
+                    id: message.user
+                    username: response.user.name
+                    realName: response.user.real_name
+                    userLink: "<@#{message.user}|#{response.user.name}>"
+
+                next null
+
         checkCallerIsAdmin = (next) ->
-            # TODO!
-            return next null
+            if data.user.username not in config.admins
+                return next new Error 'Not admin user!'
+
+            next null
 
         checkIfDrawIsRequired = (next) ->
             # TODO! - If a draw has already been made, for the coming week, there is no need to do another!
             return next null
 
         drawWinners = (next) ->
-            bot.reply message, "OK! Drawing this weeks winners!"
+            bot.reply message, "OK! Drawing this upcoming week winners!"
             draw message, (err, winners) ->
                 if err
                     return next err
@@ -181,13 +209,19 @@ bot.startRTM (err, bot, payload) ->
                 next null
 
         async.waterfall [
+            getCallerUser
+            maybeGetCallerUserFromSlack
             checkCallerIsAdmin
             checkIfDrawIsRequired
             drawWinners
         ], (err) ->
             if err
                 bot.botkit.log('Failed to draw winners.', err)
-                bot.reply message, "<@#{message.user}>: I couldn't draw any winners, please try again."
+
+                if data.user.username not in config.admins
+                    bot.reply message, "<@#{message.user}>: You're not an admin!"
+                else
+                    bot.reply message, "<@#{message.user}>: I couldn't draw any winners, please try again."
             else
                 bot.startConversation message, (err, convo) ->
                     if err
