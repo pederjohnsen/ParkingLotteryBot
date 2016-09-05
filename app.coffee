@@ -11,7 +11,7 @@ controller = Botkit.slackbot(
 )
 
 bot = controller.spawn(
-    token: 'xoxb-70992350358-Sbav8gt02ufdixeq5MGQx8dg'
+    token: config.slackBotToken
 )
 
 bot.startRTM (err, bot, payload) ->
