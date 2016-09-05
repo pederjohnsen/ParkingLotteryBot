@@ -166,9 +166,9 @@ bot.startRTM (err, bot, payload) ->
             activeUsers = _(users).filter (user) -> user.status is 'ACTIVE'
 
             if activeUsers.length
-                bot.reply message, "There's #{activeUsers.length} user#{if activeUsers.length isnt 1 then 's'} in the draw for the parking lottery."
+                bot.reply message, "There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the parking lottery."
             else
-                bot.reply message, "I don't have any data of users in the draw."
+                bot.reply message, "I don't have any data of people in the draw."
 
     controller.hears ['draw'], 'direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
