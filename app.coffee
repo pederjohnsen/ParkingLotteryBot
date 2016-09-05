@@ -158,74 +158,87 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, "I don't have any data for the upcoming weeks winners, this could be because the winners haven't been drawn yet!"
 
+    controller.hears ['list', 'users'], 'direct_mention,mention', (bot, message) ->
+        controller.storage.users.all (err, users) ->
+            if err
+                bot.botkit.log('Error getting users.', err)
+
+            activeUsers = _(users).filter (user) -> user.status is 'ACTIVE'
+
+            if activeUsers.length
+                bot.reply message, "There's #{activeUsers.length} user#{if activeUsers.length isnt 1 then 's'} in the draw for the parking lottery."
+            else
+                bot.reply message, "I don't have any data of users in the draw."
+
     controller.hears ['draw'], 'direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
         data = {}
 
-        getCallerUser = (next) ->
-            controller.storage.users.get message.user, (err, user) ->
-                if err
-                    bot.botkit.log('Failed to get user data.', err)
 
-                data.user = user
-                next null
-
-        maybeGetCallerUserFromSlack = (next) ->
-            if data.user
-                return next null
-
-            bot.api.users.info
-                user: message.user
-            , (err, response) ->
-                if err
-                    return next err
-
-                data.user =
-                    id: message.user
-                    username: response.user.name
-                    realName: response.user.real_name
-                    userLink: "<@#{message.user}|#{response.user.name}>"
-
-                next null
-
-        checkCallerIsAdmin = (next) ->
-            if data.user.username not in config.admins
-                return next new Error 'Not admin user!'
-
-            next null
-
-        checkIfDrawIsRequired = (next) ->
-            # TODO! - If a draw has already been made, for the coming week, there is no need to do another!
-            return next null
-
-        drawWinners = (next) ->
-            bot.reply message, "OK! Drawing this upcoming week winners!"
-            draw message, (err, winners) ->
-                if err
-                    return next err
-
-                data.winners = winners
-                next null
-
-        async.waterfall [
-            getCallerUser
-            maybeGetCallerUserFromSlack
-            checkCallerIsAdmin
-            checkIfDrawIsRequired
-            drawWinners
-        ], (err) ->
+        bot.startConversation message, (err, convo) ->
             if err
-                bot.botkit.log('Failed to draw winners.', err)
-
-                if data.user.username not in config.admins
-                    bot.reply message, "<@#{message.user}>: You're not an admin!"
-                else
-                    bot.reply message, "<@#{message.user}>: I couldn't draw any winners, please try again."
+                bot.botkit.log('Failed to start conversation.', err)
             else
-                bot.startConversation message, (err, convo) ->
+                getCallerUser = (next) ->
+                    controller.storage.users.get message.user, (err, user) ->
+                        if err
+                            bot.botkit.log('Failed to get user data.', err)
+
+                        data.user = user
+                        next null
+
+                maybeGetCallerUserFromSlack = (next) ->
+                    if data.user
+                        return next null
+
+                    bot.api.users.info
+                        user: message.user
+                    , (err, response) ->
+                        if err
+                            return next err
+
+                        data.user =
+                            id: message.user
+                            username: response.user.name
+                            realName: response.user.real_name
+                            userLink: "<@#{message.user}|#{response.user.name}>"
+
+                        next null
+
+                checkCallerIsAdmin = (next) ->
+                    if data.user.username not in config.admins
+                        return next new Error 'Not admin user!'
+
+                    next null
+
+                checkIfDrawIsRequired = (next) ->
+                    # TODO! - If a draw has already been made, for the coming week, there is no need to do another!
+                    return next null
+
+                drawWinners = (next) ->
+                    convo.say "OK! Drawing this upcoming week winners!"
+                    draw message, (err, winners) ->
+                        if err
+                            return next err
+
+                        data.winners = winners
+                        next null
+
+                async.waterfall [
+                    getCallerUser
+                    maybeGetCallerUserFromSlack
+                    checkCallerIsAdmin
+                    checkIfDrawIsRequired
+                    drawWinners
+                ], (err) ->
                     if err
-                        bot.botkit.log('Failed to start conversation.', err)
+                        bot.botkit.log('Failed to draw winners.', err)
+
+                        if data.user.username not in config.admins
+                            convo.say "<@#{message.user}>: You're not an admin!"
+                        else
+                            convo.say "<@#{message.user}>: I couldn't draw any winners, please try again."
                     else
                         convo.say "<!channel> Hello all! I would like to announce our parking space winners for this coming week...."
                         convo.say "The winners are: #{data.winners.join(', ')}."
@@ -277,14 +290,19 @@ draw = (message, cb) ->
         next null
 
     saveWinsOnUsers = (next) ->
-        _(data.winners).each (user) ->
+        async.eachSeries data.winners, (user, cb) ->
             newUser = _.clone(user)
             newUser.recentWins.push {week: nextWeek, year: nextYear}
             controller.storage.users.save newUser, (err) ->
                 if err
-                    return next err
+                    return cb err
 
-                next null
+                cb null
+        , (err) ->
+            if err
+                bot.botkit.log('Error while saving wins on users.', err)
+
+            next null
 
     async.waterfall [
         getEligibleUsers
