@@ -269,14 +269,16 @@ bot.startRTM (err, bot, payload) ->
                         # If draw winners images are set randomly pick one to post
                         if config.drawWinnersImages.length
                             image = _.sample(config.drawWinnersImages, 1)?[0]
-                            attachment = {
-                                attachments: [
-                                    fallback: '...and the winners are...'
-                                    image_url: image
-                                ]
-                            }
-                            convo.say attachment
-                            convo.say "#{data.winners.join(', ')}."
+                            # Posting the image as an attachment doesn't look too great, ideally we'd want to add the winners right below the picture.
+                            # attachment = {
+                            #     attachments: [
+                            #         fallback: '...and the winners are...'
+                            #         image_url: image
+                            #     ]
+                            # }
+                            # convo.say attachment
+                            # Instead lets just post the image url inline and the winners after, the winner names should appear below the image!
+                            convo.say "#{image} #{data.winners.join(', ')}."
                         else
                             convo.say "The winners are: #{data.winners.join(', ')}."
 
