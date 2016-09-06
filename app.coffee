@@ -266,7 +266,19 @@ bot.startRTM (err, bot, payload) ->
                             convo.say "<@#{message.user}>: I couldn't draw any winners, please try again."
                     else
                         convo.say "<!channel> Hello all! I would like to announce our parking space winners for this coming week...."
-                        convo.say "The winners are: #{data.winners.join(', ')}."
+                        # If draw winners images are set randomly pick one to post
+                        if config.drawWinnersImages.length
+                            image = _.sample(config.drawWinnersImages, 1)
+                            attachment = {
+                                attachments: [
+                                    fallback: '...and the winners are...'
+                                    image_url: image
+                                ]
+                            }
+                            convo.say attachment
+                            convo.say "#{data.winners.join(', ')}."
+                        else
+                            convo.say "The winners are: #{data.winners.join(', ')}."
 
 draw = (message, cb) ->
     {nextWeek, nextYear} = getNextWeekDates()
