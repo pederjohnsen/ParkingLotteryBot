@@ -100,6 +100,10 @@ bot.startRTM (err, bot, payload) ->
             if !data.user
                 return next null
 
+            if data.user.status is 'INACTIVE'
+                bot.reply message, "I've already removed you from the parking lottery!"
+                return next new Error 'User already removed from parking lottery.'
+
             newUser = _.clone(data.user)
             newUser.status = 'INACTIVE'
             controller.storage.users.save newUser, (err) ->
