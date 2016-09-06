@@ -6,7 +6,7 @@ Botkit = require('botkit')
 config = require('./config')
 
 controller = Botkit.slackbot(
-    debug: true
+    debug: config.debug
     json_file_store: './data'
 )
 
