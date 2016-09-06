@@ -213,8 +213,18 @@ bot.startRTM (err, bot, payload) ->
                     next null
 
                 checkIfDrawIsRequired = (next) ->
-                    # TODO! - If a draw has already been made, for the coming week, there is no need to do another!
-                    return next null
+                    controller.storage.teams.get message.team, (err, team) ->
+                        if err
+                            bot.botkit.log('Failed to get team data.', err)
+
+                        if !team
+                            return next null
+
+                        if _(team.draws).findWhere({week: nextWeek, year: nextYear})
+                            bot.botkit.log('Winners have already been drawn for next week.')
+                            return next new Error 'Winners have already been drawn for next week.'
+
+                        next null
 
                 drawWinners = (next) ->
                     convo.say "OK! Drawing this upcoming week winners!"
@@ -225,12 +235,20 @@ bot.startRTM (err, bot, payload) ->
                         data.winners = winners
                         next null
 
+                saveDrawOnTeam = (next) ->
+                    saveDraw message, (err) ->
+                        if err
+                            return next err
+
+                        next null                        
+
                 async.waterfall [
                     getCallerUser
                     maybeGetCallerUserFromSlack
                     checkCallerIsAdmin
                     checkIfDrawIsRequired
                     drawWinners
+                    saveDrawOnTeam
                 ], (err) ->
                     if err
                         bot.botkit.log('Failed to draw winners.', err)
@@ -313,6 +331,43 @@ draw = (message, cb) ->
             cb err
         else
             cb null, _(data.winners).pluck('userLink')
+
+saveDraw = (message, cb) ->
+    {nextWeek, nextYear} = getNextWeekDates()
+
+    data = {}
+
+    getTeamData = (next) ->
+        controller.storage.teams.get message.team, (err, team) ->
+            if err
+                bot.botkit.log('Failed to get team data.', err)
+
+            data.team = team
+            next null
+
+    saveDrawOnTeam = (next) ->
+        if data.team
+            newTeamData = _.clone(data.team)
+        else
+            newTeamData =
+                id: message.team
+                draws: []
+
+        newTeamData.draws.push {week: nextWeek, year: nextYear}
+        controller.storage.teams.save newTeamData, (err) ->
+            if err
+                bot.botkit.log('Error while saving draw on team.', err)
+
+            next null
+
+    async.waterfall [
+        getTeamData
+        saveDrawOnTeam
+    ], (err) ->
+        if err
+            cb err
+        else
+            cb null
 
 getWeekDatesInPast = (weeks) ->
     return {
