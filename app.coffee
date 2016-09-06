@@ -174,7 +174,7 @@ bot.startRTM (err, bot, payload) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
         data = {}
-
+        data.alreadyDrawn = false
 
         bot.startConversation message, (err, convo) ->
             if err
@@ -222,6 +222,7 @@ bot.startRTM (err, bot, payload) ->
 
                         if _(team.draws).findWhere({week: nextWeek, year: nextYear})
                             bot.botkit.log('Winners have already been drawn for next week.')
+                            data.alreadyDrawn = true
                             return next new Error 'Winners have already been drawn for next week.'
 
                         next null
@@ -255,6 +256,8 @@ bot.startRTM (err, bot, payload) ->
 
                         if data.user.username not in config.admins
                             convo.say "<@#{message.user}>: You're not an admin!"
+                        else if data.alreadyDrawn is true
+                            convo.say "Already drawn this upcoming weeks winners!"
                         else
                             convo.say "<@#{message.user}>: I couldn't draw any winners, please try again."
                     else
@@ -354,6 +357,7 @@ saveDraw = (message, cb) ->
                 draws: []
 
         newTeamData.draws.push {week: nextWeek, year: nextYear}
+
         controller.storage.teams.save newTeamData, (err) ->
             if err
                 bot.botkit.log('Error while saving draw on team.', err)
