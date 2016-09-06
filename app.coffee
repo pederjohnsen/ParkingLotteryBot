@@ -268,7 +268,7 @@ bot.startRTM (err, bot, payload) ->
                         convo.say "<!channel> Hello all! I would like to announce our parking space winners for this coming week...."
                         # If draw winners images are set randomly pick one to post
                         if config.drawWinnersImages.length
-                            image = _.sample(config.drawWinnersImages, 1)
+                            image = _.sample(config.drawWinnersImages, 1)?[0]
                             attachment = {
                                 attachments: [
                                     fallback: '...and the winners are...'
