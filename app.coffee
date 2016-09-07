@@ -124,7 +124,7 @@ bot.startRTM (err, bot, payload) ->
                 else
                     bot.reply message, "I've removed you from the parking lottery! You can join back anytime."
 
-    controller.hears ['current', 'current week', 'this week'], 'direct_mention,mention', (bot, message) ->
+    controller.hears ['current', 'current week', 'this week'], 'direct_message,direct_mention,mention', (bot, message) ->
         {currentWeek, currentYear} = getCurrentWeekDates()
 
         controller.storage.users.all (err, users) ->
@@ -143,7 +143,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, "I don't have any data for this weeks winners."
 
-    controller.hears ['next', 'next week', 'upcoming', 'upcoming week'], 'direct_mention,mention', (bot, message) ->
+    controller.hears ['next', 'next week', 'upcoming', 'upcoming week'], 'direct_message,direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
         controller.storage.users.all (err, users) ->
@@ -162,7 +162,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, "I don't have any data for the upcoming weeks winners, this could be because the winners haven't been drawn yet!"
 
-    controller.hears ['list', 'users'], 'direct_mention,mention', (bot, message) ->
+    controller.hears ['list', 'users'], 'direct_message,direct_mention,mention', (bot, message) ->
         controller.storage.users.all (err, users) ->
             if err
                 bot.botkit.log('Error getting users.', err)
