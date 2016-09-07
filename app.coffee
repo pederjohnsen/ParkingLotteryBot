@@ -18,7 +18,7 @@ bot.startRTM (err, bot, payload) ->
     if err
         throw new Error 'Could not connect to Slack'
 
-    controller.hears ["\bhello\b", "\bhi\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bhello\\b', '\\bhi\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         controller.storage.users.get message.user, (err, user) ->
             if err
                 bot.botkit.log('Failed to get user data.', err)
@@ -28,7 +28,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, 'Hello!'
 
-    controller.hears ["\bhelp\b", "\binfo\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bhelp\\b', '\\binfo\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         bot.startConversation message, (err, convo) ->
             if err
                 bot.botkit.log('Failed to start conversation.', err)
@@ -37,7 +37,7 @@ bot.startRTM (err, bot, payload) ->
                 convo.say "You can join by typing 'join @parkinglottery' & leave by typing 'leave @parkinglottery'."
                 convo.say "Typing 'current @parkinglottery' tells you the current weeks winners, typing 'upcoming @parkinglottery' tells you the upcoming weeks winners."
 
-    controller.hears ["\bjoin\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bjoin\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
         getUser = (next) ->
@@ -85,7 +85,7 @@ bot.startRTM (err, bot, payload) ->
                 else
                     bot.reply message, "I've entered you into the parking lottery! You don't have to do this again and you'll automatically be entered to win every week."
 
-    controller.hears ["\bleave\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bleave\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
         getUser = (next) ->
@@ -124,7 +124,7 @@ bot.startRTM (err, bot, payload) ->
                 else
                     bot.reply message, "I've removed you from the parking lottery! You can join back anytime."
 
-    controller.hears ["\bcurrent\b", "\bcurrent week\b", "\bthis week\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {currentWeek, currentYear} = getCurrentWeekDates()
 
         controller.storage.users.all (err, users) ->
@@ -143,7 +143,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, "I don't have any data for this weeks winners."
 
-    controller.hears ["\bnext\b", "\bnext week\b", "\bupcoming\b", "\bupcoming week\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bnext\\b', '\\bnext week\\b', '\\bupcoming\\b', '\\bupcoming week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
         controller.storage.users.all (err, users) ->
@@ -162,7 +162,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, "I don't have any data for the upcoming weeks winners, this could be because the winners haven't been drawn yet!"
 
-    controller.hears ["\blist\b", "\busers\b"], 'direct_message,direct_mention,mention', (bot, message) ->
+    controller.hears ['\\blist\\b', '\\busers\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         controller.storage.users.all (err, users) ->
             if err
                 bot.botkit.log('Error getting users.', err)
@@ -174,7 +174,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, "I don't have any data of people in the draw."
 
-    controller.hears ["\bdraw\b"], 'direct_mention,mention', (bot, message) ->
+    controller.hears ['\\bdraw\\b'], 'direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
         data = {}
