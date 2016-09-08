@@ -82,7 +82,7 @@ bot.startRTM (err, bot, payload) ->
                     attachment =
                         fallback: "You've already joined the parking lottery!"
                         text: "You've already joined the parking lottery!"
-                        color: 'red'
+                        color: 'warning'
 
                     emoji = ':suspect:'
                 else if data.user?.status is 'INACTIVE'
@@ -90,7 +90,7 @@ bot.startRTM (err, bot, payload) ->
                         fallback: "You've re-entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
                         title: "Welcome back to the Parking Lottery <@#{message.user}>!"
                         text: "You've re-entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
-                        color: 'green'
+                        color: 'good'
 
                     emoji = ':sunglasses:'
                 else
@@ -98,7 +98,7 @@ bot.startRTM (err, bot, payload) ->
                         fallback: "You've entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
                         title: "Welcome to the Parking Lottery <@#{message.user}>!"
                         text: "You've entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
-                        color: 'green'
+                        color: 'good'
 
                     emoji = ':+1::skin-tone-2:'
 
