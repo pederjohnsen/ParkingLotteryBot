@@ -84,7 +84,7 @@ bot.startRTM (err, bot, payload) ->
                         text: "You've already joined the parking lottery!"
                         color: 'warning'
 
-                    emoji = ':suspect:'
+                    emoji = 'suspect'
                 else if data.user?.status is 'INACTIVE'
                     attachment =
                         fallback: "Welcome back to the Parking Lottery <@#{message.user}>!\nYou'll be automatically entered to win a parking space every week."
@@ -92,7 +92,7 @@ bot.startRTM (err, bot, payload) ->
                         text: "You'll be automatically entered to win a parking space every week."
                         color: 'good'
 
-                    emoji = ':sunglasses:'
+                    emoji = 'sunglasses'
                 else
                     attachment =
                         fallback: "Welcome to the Parking Lottery <@#{message.user}>!\nYou'll be automatically entered to win a parking space every week."
@@ -100,11 +100,19 @@ bot.startRTM (err, bot, payload) ->
                         text: "You'll be automatically entered to win a parking space every week."
                         color: 'good'
 
-                    emoji = ':+1::skin-tone-2:'
+                    emoji = '+1::skin-tone-2'
+
+                bot.api.reactions.add
+                    timestamp: message.ts
+                    channel: message.channel
+                    name: emoji
+                , (err, response) ->
+                    if err
+                        bot.botkit.log('Failed to add emoji reaction.', err)
 
                 replyWithAttachments =
                     attachments: [attachment]
-                    icon_emoji: emoji
+                    ts: message.ts
 
                 bot.reply message, replyWithAttachments
 
