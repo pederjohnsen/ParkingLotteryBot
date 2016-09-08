@@ -107,6 +107,8 @@ bot.startRTM (err, bot, payload) ->
                     attachments: attachment
                     icon_emoji: emoji
 
+                bot.reply message, replyWithAttachments
+
     controller.hears ['\\bleave\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
