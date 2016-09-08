@@ -80,8 +80,8 @@ bot.startRTM (err, bot, payload) ->
             else
                 if data.user?.status is 'ACTIVE'
                     attachment =
-                        fallback: "You've already joined the parking lottery!"
-                        text: "You've already joined the parking lottery!"
+                        fallback: "You've already joined the Parking Lottery!"
+                        text: "You've already joined the Parking Lottery!"
                         color: 'warning'
 
                     emoji = 'suspect'
@@ -132,7 +132,27 @@ bot.startRTM (err, bot, payload) ->
                 return next null
 
             if data.user.status is 'INACTIVE'
-                bot.reply message, "I've already removed you from the parking lottery!"
+                attachment =
+                    fallback: "You've already been removed from the Parking Lottery!"
+                    text: "You've already been removed from the Parking Lottery!"
+                    color: 'warning'
+
+                emoji = 'angry'
+
+                bot.api.reactions.add
+                    timestamp: message.ts
+                    channel: message.channel
+                    name: emoji
+                , (err, response) ->
+                    if err
+                        bot.botkit.log('Failed to add emoji reaction.', err)
+
+                replyWithAttachments =
+                    attachments: [attachment]
+                    ts: message.ts
+
+                bot.reply message, replyWithAttachments
+
                 return next new Error 'User already removed from parking lottery.'
 
             newUser = _.clone(data.user)
@@ -151,9 +171,34 @@ bot.startRTM (err, bot, payload) ->
                 bot.botkit.log('Failed to remove user from parking lottery.', err)
             else
                 if !data.user
-                    bot.reply message, "I can't remove you from the parking lottery as you've yet to join!"
+                    attachment =
+                        fallback: "You haven't even joined the Parking Lottery yet!"
+                        text: "You haven't even joined the Parking Lottery yet!"
+                        color: 'warning'
+
+                    emoji = 'confused'
                 else
-                    bot.reply message, "I've removed you from the parking lottery! You can join back anytime."
+                    attachment =
+                        fallback: "You've just left the Parking Lottery <@#{message.user}>!\nYou'll need to re-join if you want to win a parking space again."
+                        title: "You've just left the Parking Lottery <@#{message.user}>!"
+                        text: "You'll need to re-join if you want to win a parking space again."
+                        color: 'good'
+
+                    emoji = 'cry'
+
+                bot.api.reactions.add
+                    timestamp: message.ts
+                    channel: message.channel
+                    name: emoji
+                , (err, response) ->
+                    if err
+                        bot.botkit.log('Failed to add emoji reaction.', err)
+
+                replyWithAttachments =
+                    attachments: [attachment]
+                    ts: message.ts
+
+                bot.reply message, replyWithAttachments
 
     controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {currentWeek, currentYear} = getCurrentWeekDates()
