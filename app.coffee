@@ -79,11 +79,33 @@ bot.startRTM (err, bot, payload) ->
                 bot.botkit.log('Failed to add user to parking lottery.', err)
             else
                 if data.user?.status is 'ACTIVE'
-                    bot.reply message, "You've already joined the parking lottery!"
+                    attachment =
+                        fallback: "You've already joined the parking lottery!"
+                        text: "You've already joined the parking lottery!"
+                        color: 'red'
+
+                    emoji = ':suspect:'
                 else if data.user?.status is 'INACTIVE'
-                    bot.reply message, "I've re-entered you into the parking lottery! You don't have to do this again and you'll automatically be entered to win every week."
+                    attachment =
+                        fallback: "You've re-entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        title: "Welcome back to the Parking Lottery <@#{message.user}>!"
+                        text: "You've re-entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        color: 'green'
+
+                    emoji = ':sunglasses:'
                 else
-                    bot.reply message, "I've entered you into the parking lottery! You don't have to do this again and you'll automatically be entered to win every week."
+                    attachment =
+                        fallback: "You've entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        title: "Welcome to the Parking Lottery <@#{message.user}>!"
+                        text: "You've entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        color: 'green'
+
+                    emoji = ':+1::skin-tone-2:'
+
+                replyWithAttachments =
+                    username: 'Parking Lottery'
+                    attachments: attachment
+                    icon_emoji: emoji
 
     controller.hears ['\\bleave\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
