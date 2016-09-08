@@ -87,24 +87,23 @@ bot.startRTM (err, bot, payload) ->
                     emoji = ':suspect:'
                 else if data.user?.status is 'INACTIVE'
                     attachment =
-                        fallback: "You've re-entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        fallback: "Welcome back to the Parking Lottery <@#{message.user}>!\nYou'll be automatically entered to win a parking space every week."
                         title: "Welcome back to the Parking Lottery <@#{message.user}>!"
-                        text: "You've re-entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        text: "You'll be automatically entered to win a parking space every week."
                         color: 'good'
 
                     emoji = ':sunglasses:'
                 else
                     attachment =
-                        fallback: "You've entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        fallback: "Welcome to the Parking Lottery <@#{message.user}>!\nYou'll be automatically entered to win a parking space every week."
                         title: "Welcome to the Parking Lottery <@#{message.user}>!"
-                        text: "You've entered the parking lottery!\nYou'll be automatically entered to win a parking space every week."
+                        text: "You'll be automatically entered to win a parking space every week."
                         color: 'good'
 
                     emoji = ':+1::skin-tone-2:'
 
                 replyWithAttachments =
-                    username: 'Parking Lottery'
-                    attachments: attachment
+                    attachments: [attachment]
                     icon_emoji: emoji
 
                 bot.reply message, replyWithAttachments
