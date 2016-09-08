@@ -179,8 +179,8 @@ bot.startRTM (err, bot, payload) ->
                     emoji = 'confused'
                 else
                     attachment =
-                        fallback: "You've just left the Parking Lottery <@#{message.user}>!\nYou'll need to re-join if you want to win a parking space again."
-                        title: "You've just left the Parking Lottery <@#{message.user}>!"
+                        fallback: "<@#{message.user}>, you've just left the Parking Lottery!\nYou'll need to re-join if you want to win a parking space again."
+                        title: "<@#{message.user}>, you've just left the Parking Lottery!"
                         text: "You'll need to re-join if you want to win a parking space again."
                         color: 'good'
 
