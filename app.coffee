@@ -190,9 +190,9 @@ bot.startRTM (err, bot, payload) ->
 
                     emoji = 'confused'
                 else
+                    text = "*<@#{message.user}>, you've just left the Parking Lottery!*"
                     attachment =
-                        fallback: "<@#{message.user}>, you've just left the Parking Lottery!\nYou'll need to re-join if you want to win a parking space again."
-                        title: "<@#{message.user}>, you've just left the Parking Lottery!"
+                        fallback: "You'll need to re-join if you want to win a parking space again."
                         text: "You'll need to re-join if you want to win a parking space again."
                         color: 'good'
 
@@ -209,6 +209,9 @@ bot.startRTM (err, bot, payload) ->
                 replyWithAttachments =
                     attachments: [attachment]
                     timestamp: message.ts
+
+                if text
+                    replyWithAttachments.text = text
 
                 bot.reply message, replyWithAttachments
 
