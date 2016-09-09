@@ -29,13 +29,22 @@ bot.startRTM (err, bot, payload) ->
                 bot.reply message, 'Hello!'
 
     controller.hears ['\\bhelp\\b', '\\binfo\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        bot.startConversation message, (err, convo) ->
-            if err
-                bot.botkit.log('Failed to start conversation.', err)
-            else
-                convo.say "I'm the parking lottery bot."
-                convo.say "You can join by typing 'join @parkinglottery' & leave by typing 'leave @parkinglottery'."
-                convo.say "Typing 'current @parkinglottery' tells you the current weeks winners, typing 'upcoming @parkinglottery' tells you the upcoming weeks winners."
+        messages = [
+            "You can join by typing 'join @parkinglottery' & leave by typing 'leave @parkinglottery'."
+            "Typing 'current @parkinglottery' tells you the current weeks winners, typing 'upcoming @parkinglottery' tells you the upcoming weeks winners."
+        ]
+
+        attachment =
+            fallback: messages.join('\n')
+            text: messages.join('\n')
+            color: 'good'
+
+        replyWithAttachments =
+            text: "I'm the Parking Lottery bot."
+            attachments: [attachment]
+            timestamp: message.ts
+
+        bot.reply message, replyWithAttachments
 
     controller.hears ['\\bjoin\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
@@ -112,7 +121,7 @@ bot.startRTM (err, bot, payload) ->
 
                 replyWithAttachments =
                     attachments: [attachment]
-                    ts: message.ts
+                    timestamp: message.ts
 
                 bot.reply message, replyWithAttachments
 
@@ -149,7 +158,7 @@ bot.startRTM (err, bot, payload) ->
 
                 replyWithAttachments =
                     attachments: [attachment]
-                    ts: message.ts
+                    timestamp: message.ts
 
                 bot.reply message, replyWithAttachments
 
@@ -196,7 +205,7 @@ bot.startRTM (err, bot, payload) ->
 
                 replyWithAttachments =
                     attachments: [attachment]
-                    ts: message.ts
+                    timestamp: message.ts
 
                 bot.reply message, replyWithAttachments
 
@@ -215,9 +224,23 @@ bot.startRTM (err, bot, payload) ->
                 .value()
 
             if currentWinners.length
-                bot.reply message, "The current winners are: #{currentWinners.join(', ')}."
+                attachment =
+                    fallback: "Current weeks Parking Lottery winners are:\n#{currentWinners.join(', ')}."
+                    title: "Current weeks Parking Lottery winners"
+                    text: "#{currentWinners.join(', ')}."
+                    color: 'good'
             else
-                bot.reply message, "I don't have any data for this weeks winners."
+                attachment =
+                    fallback: "I don't have any data for this weeks winners."
+                    title: "Error"
+                    text: "I don't have any data for this weeks winners."
+                    color: 'danger'
+
+            replyWithAttachments =
+                attachments: [attachment]
+                timestamp: message.ts
+
+            bot.reply message, replyWithAttachments
 
     controller.hears ['\\bnext\\b', '\\bnext week\\b', '\\bupcoming\\b', '\\bupcoming week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
@@ -234,9 +257,23 @@ bot.startRTM (err, bot, payload) ->
                 .value()
 
             if upcomingWinners.length
-                bot.reply message, "The upcoming weeks winners are: #{upcomingWinners.join(', ')}."
+                attachment =
+                    fallback: "Upcoming weeks Parking Lottery winners are:\n#{upcomingWinners.join(', ')}."
+                    title: "Upcoming weeks Parking Lottery winners"
+                    text: "#{upcomingWinners.join(', ')}."
+                    color: 'good'
             else
-                bot.reply message, "I don't have any data for the upcoming weeks winners, this could be because the winners haven't been drawn yet!"
+                attachment =
+                    fallback: "I don't have any data for the upcoming weeks winners, this could be because the winners haven't been drawn yet!"
+                    title: "Error"
+                    text: "I don't have any data for the upcoming weeks winners, this could be because the winners haven't been drawn yet!"
+                    color: 'danger'
+
+            replyWithAttachments =
+                attachments: [attachment]
+                timestamp: message.ts
+
+            bot.reply message, replyWithAttachments
 
     controller.hears ['\\blist\\b', '\\busers\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         controller.storage.users.all (err, users) ->
@@ -246,9 +283,22 @@ bot.startRTM (err, bot, payload) ->
             activeUsers = _(users).filter (user) -> user.status is 'ACTIVE'
 
             if activeUsers.length
-                bot.reply message, "There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the parking lottery."
+                attachment =
+                    fallback: "There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery."
+                    text: "There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery."
+                    color: 'good'
             else
-                bot.reply message, "I don't have any data of people in the draw."
+                attachment =
+                    fallback: "I don't have any data of people in the draw."
+                    title: "Error"
+                    text: "I don't have any data of people in the draw."
+                    color: 'danger'
+
+            replyWithAttachments =
+                attachments: [attachment]
+                timestamp: message.ts
+
+            bot.reply message, replyWithAttachments
 
     controller.hears ['\\bdraw\\b'], 'direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
@@ -256,107 +306,136 @@ bot.startRTM (err, bot, payload) ->
         data = {}
         data.alreadyDrawn = false
 
-        bot.startConversation message, (err, convo) ->
+        getCallerUser = (next) ->
+            controller.storage.users.get message.user, (err, user) ->
+                if err
+                    bot.botkit.log('Failed to get user data.', err)
+
+                data.user = user
+                next null
+
+        maybeGetCallerUserFromSlack = (next) ->
+            if data.user
+                return next null
+
+            bot.api.users.info
+                user: message.user
+            , (err, response) ->
+                if err
+                    return next err
+
+                data.user =
+                    id: message.user
+                    username: response.user.name
+                    realName: response.user.real_name
+                    userLink: "<@#{message.user}|#{response.user.name}>"
+
+                next null
+
+        checkCallerIsAdmin = (next) ->
+            if data.user.username not in config.admins
+                return next new Error 'Not admin user!'
+
+            next null
+
+        checkIfDrawIsRequired = (next) ->
+            controller.storage.teams.get message.team, (err, team) ->
+                if err
+                    bot.botkit.log('Failed to get team data.', err)
+
+                if !team
+                    return next null
+
+                if _(team.draws).findWhere({week: nextWeek, year: nextYear})
+                    bot.botkit.log('Winners have already been drawn for next week.')
+                    data.alreadyDrawn = true
+                    return next new Error 'Winners have already been drawn for next week.'
+
+                next null
+
+        drawWinners = (next) ->
+            draw message, (err, winners) ->
+                if err
+                    return next err
+
+                data.winners = winners
+                next null
+
+        saveDrawOnTeam = (next) ->
+            saveDraw message, (err) ->
+                if err
+                    return next err
+
+                next null                        
+
+        async.waterfall [
+            getCallerUser
+            maybeGetCallerUserFromSlack
+            checkCallerIsAdmin
+            checkIfDrawIsRequired
+            drawWinners
+            saveDrawOnTeam
+        ], (err) ->
             if err
-                bot.botkit.log('Failed to start conversation.', err)
+                bot.botkit.log('Failed to draw winners.', err)
+
+                if data.user.username not in config.admins
+                    attachment =
+                        fallback: "<@#{message.user}>: You're not an admin!"
+                        text: "<@#{message.user}>: You're not an admin!"
+                        color: 'danger'
+
+                    emoji = 'suspect'
+                else if data.alreadyDrawn is true
+                    attachment =
+                        fallback: "The upcoming Parking Lottery winners have already been drawn!"
+                        text: "The upcoming Parking Lottery winners have already been drawn!"
+                        color: 'warning'
+
+                    emoji = 'grey_exclamation'
+                else
+                    attachment =
+                        fallback: "<@#{message.user}>: I couldn't draw any winners, please try again."
+                        title: "Error"
+                        text: "<@#{message.user}>: I couldn't draw any winners, please try again."
+                        color: 'danger'
+
+                    emoji = 'exclamation'
             else
-                getCallerUser = (next) ->
-                    controller.storage.users.get message.user, (err, user) ->
-                        if err
-                            bot.botkit.log('Failed to get user data.', err)
+                text = "<!channel> Hello all! I would like to announce our parking space winners for this coming week...."
+                # If draw winners images are set randomly pick one to post
+                if config.drawWinnersImages.length
+                    image = _.sample(config.drawWinnersImages, 1)?[0]
 
-                        data.user = user
-                        next null
+                    text += "\n#{image}"
 
-                maybeGetCallerUserFromSlack = (next) ->
-                    if data.user
-                        return next null
+                    attachment =
+                        fallback: "...and the winners are...\n#{data.winners.join(', ')}."
+                        text: "#{data.winners.join(', ')}."
+                        #image_url: image
+                        color: 'good'
+                else
+                    attachment =
+                        fallback: "...and the winners are...\n#{data.winners.join(', ')}."
+                        title: "Upcoming weeks winners of the Parking Lottery"
+                        text: "#{data.winners.join(', ')}."
+                        color: 'good'
 
-                    bot.api.users.info
-                        user: message.user
-                    , (err, response) ->
-                        if err
-                            return next err
+                emoji = 'admission_tickets'
 
-                        data.user =
-                            id: message.user
-                            username: response.user.name
-                            realName: response.user.real_name
-                            userLink: "<@#{message.user}|#{response.user.name}>"
+            bot.api.reactions.add
+                timestamp: message.ts
+                channel: message.channel
+                name: emoji
 
-                        next null
+            replyWithAttachments =
+                attachments: [attachment]
+                timestamp: message.ts
 
-                checkCallerIsAdmin = (next) ->
-                    if data.user.username not in config.admins
-                        return next new Error 'Not admin user!'
+            if message
+                replyWithAttachments.text = text
 
-                    next null
-
-                checkIfDrawIsRequired = (next) ->
-                    controller.storage.teams.get message.team, (err, team) ->
-                        if err
-                            bot.botkit.log('Failed to get team data.', err)
-
-                        if !team
-                            return next null
-
-                        if _(team.draws).findWhere({week: nextWeek, year: nextYear})
-                            bot.botkit.log('Winners have already been drawn for next week.')
-                            data.alreadyDrawn = true
-                            return next new Error 'Winners have already been drawn for next week.'
-
-                        next null
-
-                drawWinners = (next) ->
-                    convo.say "OK! Drawing this upcoming week winners!"
-                    draw message, (err, winners) ->
-                        if err
-                            return next err
-
-                        data.winners = winners
-                        next null
-
-                saveDrawOnTeam = (next) ->
-                    saveDraw message, (err) ->
-                        if err
-                            return next err
-
-                        next null                        
-
-                async.waterfall [
-                    getCallerUser
-                    maybeGetCallerUserFromSlack
-                    checkCallerIsAdmin
-                    checkIfDrawIsRequired
-                    drawWinners
-                    saveDrawOnTeam
-                ], (err) ->
-                    if err
-                        bot.botkit.log('Failed to draw winners.', err)
-
-                        if data.user.username not in config.admins
-                            convo.say "<@#{message.user}>: You're not an admin!"
-                        else if data.alreadyDrawn is true
-                            convo.say "Already drawn this upcoming weeks winners!"
-                        else
-                            convo.say "<@#{message.user}>: I couldn't draw any winners, please try again."
-                    else
-                        convo.say "<!channel> Hello all! I would like to announce our parking space winners for this coming week...."
-                        # If draw winners images are set randomly pick one to post
-                        if config.drawWinnersImages.length
-                            image = _.sample(config.drawWinnersImages, 1)?[0]
-                            # Posting the image as an attachment doesn't look too great, ideally we'd want to add the winners right below the picture.
-                            # attachment = {
-                            #     attachments: [
-                            #         fallback: '...and the winners are...'
-                            #         image_url: image
-                            #     ]
-                            # }
-                            # convo.say attachment
-                            # Instead lets just post the image url inline and the winners after, the winner names should appear below the image!
-                            convo.say "#{image} #{data.winners.join(', ')}."
-                        else
-                            convo.say "The winners are: #{data.winners.join(', ')}."
+            bot.reply message, replyWithAttachments
 
 draw = (message, cb) ->
     {nextWeek, nextYear} = getNextWeekDates()
