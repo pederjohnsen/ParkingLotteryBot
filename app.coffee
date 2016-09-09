@@ -224,9 +224,9 @@ bot.startRTM (err, bot, payload) ->
                 .value()
 
             if currentWinners.length
+                text = "Current weeks Parking Lottery winners are:"
                 attachment =
-                    fallback: "Current weeks Parking Lottery winners are:\n#{currentWinners.join(', ')}."
-                    title: "Current weeks Parking Lottery winners"
+                    fallback: "#{currentWinners.join(', ')}."
                     text: "#{currentWinners.join(', ')}."
                     color: 'good'
             else
@@ -239,6 +239,9 @@ bot.startRTM (err, bot, payload) ->
             replyWithAttachments =
                 attachments: [attachment]
                 timestamp: message.ts
+
+            if text
+                replyWithAttachments.text = text
 
             bot.reply message, replyWithAttachments
 
@@ -257,9 +260,9 @@ bot.startRTM (err, bot, payload) ->
                 .value()
 
             if upcomingWinners.length
+                text = "Upcoming weeks Parking Lottery winners are:"
                 attachment =
-                    fallback: "Upcoming weeks Parking Lottery winners are:\n#{upcomingWinners.join(', ')}."
-                    title: "Upcoming weeks Parking Lottery winners"
+                    fallback: "#{upcomingWinners.join(', ')}."
                     text: "#{upcomingWinners.join(', ')}."
                     color: 'good'
             else
@@ -272,6 +275,9 @@ bot.startRTM (err, bot, payload) ->
             replyWithAttachments =
                 attachments: [attachment]
                 timestamp: message.ts
+
+            if text
+                replyWithAttachments.text = text
 
             bot.reply message, replyWithAttachments
 
