@@ -95,7 +95,7 @@ bot.startRTM (err, bot, payload) ->
 
                     emoji = 'suspect'
                 else if data.user?.status is 'INACTIVE'
-                    text = "Welcome back to the Parking Lottery <@#{message.user}>!"
+                    text = "*Welcome back to the Parking Lottery <@#{message.user}>!*"
                     attachment =
                         fallback: "You'll be automatically entered to win a parking space every week."
                         text: "You'll be automatically entered to win a parking space every week."
@@ -103,7 +103,7 @@ bot.startRTM (err, bot, payload) ->
 
                     emoji = 'sunglasses'
                 else
-                    text = "Welcome to the Parking Lottery <@#{message.user}>!"
+                    text = "*Welcome to the Parking Lottery <@#{message.user}>!*"
                     attachment =
                         fallback: "You'll be automatically entered to win a parking space every week."
                         text: "You'll be automatically entered to win a parking space every week."
@@ -227,7 +227,7 @@ bot.startRTM (err, bot, payload) ->
                 .value()
 
             if currentWinners.length
-                text = "Current weeks Parking Lottery winners are:"
+                text = "*Current weeks Parking Lottery winners are:*"
                 attachment =
                     fallback: "#{currentWinners.join(', ')}."
                     text: "#{currentWinners.join(', ')}."
@@ -263,7 +263,7 @@ bot.startRTM (err, bot, payload) ->
                 .value()
 
             if upcomingWinners.length
-                text = "Upcoming weeks Parking Lottery winners are:"
+                text = "*Upcoming weeks Parking Lottery winners are:*"
                 attachment =
                     fallback: "#{upcomingWinners.join(', ')}."
                     text: "#{upcomingWinners.join(', ')}."
