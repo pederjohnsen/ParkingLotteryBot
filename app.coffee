@@ -464,7 +464,7 @@ draw = (message, cb) ->
                 .clone()
                 .filter (user) ->
                     # Users can decide to leave the parking lottery
-                    if !user.status is 'ACTIVE'
+                    if user.status isnt 'ACTIVE'
                         return false
 
                     if !user.recentWins.length
