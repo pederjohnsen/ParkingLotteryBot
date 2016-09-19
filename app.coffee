@@ -308,7 +308,12 @@ bot.startRTM (err, bot, payload) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
-            activeUsers = _(users).filter (user) -> user.status is 'ACTIVE'
+            activeUsers = _(users)
+                .chain()
+                .filter (user) ->
+                    user.status is 'ACTIVE'
+                .pluck('username')
+                .value()
 
             if activeUsers.length
                 text = "*There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery.*"
