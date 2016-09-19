@@ -338,9 +338,6 @@ bot.startRTM (err, bot, payload) ->
             bot.reply message, replyWithAttachments
 
     controller.hears ['\\bdonate\\b'], 'direct_mention,mention', (bot, message) ->
-        # TODO
-        return
-
         data = {}
 
         getDonator = (next) ->
@@ -353,7 +350,7 @@ bot.startRTM (err, bot, payload) ->
 
         doesUserHaveParkingSpotToDonate = (next) ->
             if !data.user
-                return next null
+                return next new Error 'No user data.'
 
             {currentWeek, currentYear} = getCurrentWeekDates()
             {nextWeek, nextYear} = getNextWeekDates()
@@ -366,19 +363,75 @@ bot.startRTM (err, bot, payload) ->
                 
             next null
 
+        getEligibleUsers = (next) ->
+            controller.storage.users.all (err, users) ->
+                if err
+                    return next err
+
+                data.eligibleUsers = _(users)
+                    .chain()
+                    .clone()
+                    .filter (user) ->
+                        # Users can decide to leave the parking lottery
+                        if user.status isnt 'ACTIVE'
+                            return false
+
+                        if !user.recentWins.length
+                            return true
+                        else
+                            if data.currentWeekWinner
+                                data.week = currentWeek
+                                data.year = currentYear
+                            else if data.nextWeekWinner
+                                data.week = nextWeek
+                                data.year = nextYear
+
+                            if !_(user.recentWins).findWhere({week: data.week, year: data.year})
+                                return true
+                    .value()
+
+                next null
+
         drawDonationUser = (next) ->
-            # Todo
+            if !data.eligibleUsers.length
+                return next new Error 'No eligible users!'
+
+            data.winner = _.sample(data.eligibleUsers, 1)
             next null
+
+        setDonatedFlagOnDonatorWin = (next) ->
+            newUser = _.clone(data.user)
+            winToUpdate = _(newUser).findWhere({week: data.week, year: data.year})
+            winIndex = _.indexOf(newUser, winToUpdate)
+            newUser.recentWins[winIndex].donated = data.winner.id
+            controller.storage.users.save newUser, (err) ->
+                if err
+                    bot.botkit.log('Error while updating win on user.', err)
+
+                next null
+
+        saveWinOnUser = (next) ->
+            newUser = _.clone(data.winner)
+            newUser.recentWins.push {week: nextWeek, year: nextYear, donated: true}
+            controller.storage.users.save newUser, (err) ->
+                if err
+                    bot.botkit.log('Error while saving win on users.', err)
+                    # TODO: remove donated flag on user donating win as unable to save win on user
+
+                next null
 
         async.waterfall [
             getDonator
             doesUserHaveParkingSpotToDonate
+            getEligibleUsers
             drawDonationUser
+            setDonatedFlagOnDonatorWin
+            saveWinOnUser
         ], (err) ->
             if err
                 bot.botkit.log('Failed to draw winners.', err)
 
-                if !data.currentWeekWinner and !data.nextWeekWinner
+                if !data.user or (!data.currentWeekWinner and !data.nextWeekWinner)
                     attachment =
                         fallback: "<@#{message.user}>: You don't have any wins to donate!"
                         text: "<@#{message.user}>: You don't have any wins to donate!"
@@ -668,7 +721,8 @@ getWinners = (week, year, cb) ->
         winners = _(users)
             .chain()
             .filter (user) ->
-                _(user.recentWins).findWhere({week: week, year: year})
+                recentWin = _(user.recentWins).findWhere({week: week, year: year})
+                recentWin and recentWin.donated isnt true
             .map (user) ->
                 recentWin = _(user.recentWins).findWhere({week: week, year: year})
                 if recentWin.donated
