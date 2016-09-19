@@ -313,7 +313,7 @@ bot.startRTM (err, bot, payload) ->
                 .filter (user) ->
                     user.status is 'ACTIVE'
                 .pluck('username')
-                .value()
+                .value()>
 
             if activeUsers.length
                 text = "*There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery.*"
@@ -327,6 +327,83 @@ bot.startRTM (err, bot, payload) ->
                     title: "Error"
                     text: "I don't have any data of people in the draw."
                     color: 'danger'
+
+            replyWithAttachments =
+                attachments: [attachment]
+                timestamp: message.ts
+
+            if text
+                replyWithAttachments.text = text
+
+            bot.reply message, replyWithAttachments
+
+    controller.hears ['\\bdonate\\b'], 'direct_mention,mention', (bot, message) ->
+        # TODO
+        return
+
+        data = {}
+
+        getDonator = (next) ->
+            controller.storage.users.get message.user, (err, user) ->
+                if err
+                    bot.botkit.log('Failed to get user data.', err)
+
+                data.user = user
+                next null
+
+        doesUserHaveParkingSpotToDonate = (next) ->
+            if !data.user
+                return next null
+
+            {currentWeek, currentYear} = getCurrentWeekDates()
+            {nextWeek, nextYear} = getNextWeekDates()
+
+            data.currentWeekWinner = _(data.user.recentWins).findWhere({week: currentWeek, year: currentYear, donated: false})
+            data.nextWeekWinner = _(data.user.recentWins).findWhere({week: nextWeek, year: nextYear, donated: false})
+
+            if !data.currentWeekWinner and !data.nextWeekWinner
+                return next new Error 'No wins on user that can be donated!'
+                
+            next null
+
+        drawDonationUser = (next) ->
+            # Todo
+            next null
+
+        async.waterfall [
+            getDonator
+            doesUserHaveParkingSpotToDonate
+            drawDonationUser
+        ], (err) ->
+            if err
+                bot.botkit.log('Failed to draw winners.', err)
+
+                if !data.currentWeekWinner and !data.nextWeekWinner
+                    attachment =
+                        fallback: "<@#{message.user}>: You don't have any wins to donate!"
+                        text: "<@#{message.user}>: You don't have any wins to donate!"
+                        color: 'warning'
+
+                    emoji = 'suspect'
+            else
+                if data.currentWeekWinner
+                    week = "this"
+                else if data.nextWeekWinner
+                    week = "next"
+
+                text = "<!channel> Hello all! <@#{message.user}> just donated their parking space for #{week} week...."
+                attachment =
+                    fallback: "...and the lucky winner is...\n#{data.winner}."
+                    title: "And the lucky winner is"
+                    text: ".\n#{data.winner}."
+                    color: 'good'
+
+                emoji = 'admission_tickets'
+
+            bot.api.reactions.add
+                timestamp: message.ts
+                channel: message.channel
+                name: emoji
 
             replyWithAttachments =
                 attachments: [attachment]
@@ -403,7 +480,7 @@ bot.startRTM (err, bot, payload) ->
                 if err
                     return next err
 
-                next null                        
+                next null
 
         async.waterfall [
             getCallerUser
@@ -469,7 +546,7 @@ bot.startRTM (err, bot, payload) ->
                 attachments: [attachment]
                 timestamp: message.ts
 
-            if message
+            if text
                 replyWithAttachments.text = text
 
             bot.reply message, replyWithAttachments
@@ -592,7 +669,13 @@ getWinners = (week, year, cb) ->
             .chain()
             .filter (user) ->
                 _(user.recentWins).findWhere({week: week, year: year})
-            .pluck('userLink')
+            .map (user) ->
+                recentWin = _(user.recentWins).findWhere({week: week, year: year})
+                if recentWin.donated
+                    donatedWinUser = _(users).findWhere({id: recentWin.donated})
+                    return "#{donatedWinUser.userLink} donated by: #{user.userLink}"
+                else
+                    return user.userLink
             .value()
 
         cb null, winners
