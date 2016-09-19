@@ -215,19 +215,42 @@ bot.startRTM (err, bot, payload) ->
 
                 bot.reply message, replyWithAttachments
 
-    controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        {currentWeek, currentYear} = getCurrentWeekDates()
+    controller.hears ['\\blast\\b', '\\bprevious\\b', '\\blast week\\b', '\\bprevious week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
+        {previousWeek, previousYear} = getPreviousWeekDates()
 
-        controller.storage.users.all (err, users) ->
+        @getWinners previousWeek, previousYear, (err, previousWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
-            currentWinners = _(users)
-                .chain()
-                .filter (user) ->
-                    _(user.recentWins).findWhere({week: currentWeek, year: currentYear})
-                .pluck('userLink')
-                .value()
+            if previousWinners.length
+                text = "*Previous weeks Parking Lottery winners was:*"
+                attachment =
+                    fallback: "#{previousWinners.join(', ')}."
+                    text: "#{previousWinners.join(', ')}."
+                    color: 'good'
+            else
+                attachment =
+                    fallback: "I don't have any data for the previous weeks winners."
+                    title: "Error"
+                    text: "I don't have any data for the previous weeks winners."
+                    color: 'danger'
+
+            replyWithAttachments =
+                attachments: [attachment]
+                timestamp: message.ts
+
+            if text
+                replyWithAttachments.text = text
+
+            bot.reply message, replyWithAttachments
+
+
+    controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
+        {currentWeek, currentYear} = getCurrentWeekDates()
+
+        @getWinners currentWeek, currentYear, (err, currentWinners) ->
+            if err
+                bot.botkit.log('Error getting users.', err)
 
             if currentWinners.length
                 text = "*Current weeks Parking Lottery winners are:*"
@@ -254,16 +277,9 @@ bot.startRTM (err, bot, payload) ->
     controller.hears ['\\bnext\\b', '\\bnext week\\b', '\\bupcoming\\b', '\\bupcoming week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
-        controller.storage.users.all (err, users) ->
+        @getWinners nextWeek, nextYear, (err, upcomingWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
-
-            upcomingWinners = _(users)
-                .chain()
-                .filter (user) ->
-                    _(user.recentWins).findWhere({week: nextWeek, year: nextYear})
-                .pluck('userLink')
-                .value()
 
             if upcomingWinners.length
                 text = "*Upcoming weeks Parking Lottery winners are:*"
@@ -558,10 +574,32 @@ saveDraw = (message, cb) ->
         else
             cb null
 
+getWinners = (week, year, cb) ->
+    controller.storage.users.all (err, users) ->
+        if err
+            bot.botkit.log('Error getting users.', err)
+
+        winners = _(users)
+            .chain()
+            .filter (user) ->
+                _(user.recentWins).findWhere({week: week, year: year})
+            .pluck('userLink')
+            .value()
+
+        cb null, winners
+
 getWeekDatesInPast = (weeks) ->
     return {
         weekInPast: moment().subtract(weeks, 'week').week()
         yearInPast: moment().subtract(weeks, 'week').year()
+    }
+
+getPreviousWeekDates = ->
+    previousWeekDates = @getWeekDatesInPast(1)
+
+    return {
+        previousWeek: previousWeekDates.weekInPast
+        previousYear: previousWeekDates.yearInPast
     }
 
 getCurrentWeekDates = ->
