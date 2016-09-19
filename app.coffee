@@ -218,7 +218,7 @@ bot.startRTM (err, bot, payload) ->
     controller.hears ['\\blast\\b', '\\bprevious\\b', '\\blast week\\b', '\\bprevious week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {previousWeek, previousYear} = getPreviousWeekDates()
 
-        @getWinners previousWeek, previousYear, (err, previousWinners) ->
+        getWinners previousWeek, previousYear, (err, previousWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -248,7 +248,7 @@ bot.startRTM (err, bot, payload) ->
     controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {currentWeek, currentYear} = getCurrentWeekDates()
 
-        @getWinners currentWeek, currentYear, (err, currentWinners) ->
+        getWinners currentWeek, currentYear, (err, currentWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -277,7 +277,7 @@ bot.startRTM (err, bot, payload) ->
     controller.hears ['\\bnext\\b', '\\bnext week\\b', '\\bupcoming\\b', '\\bupcoming week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
-        @getWinners nextWeek, nextYear, (err, upcomingWinners) ->
+        getWinners nextWeek, nextYear, (err, upcomingWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -595,7 +595,7 @@ getWeekDatesInPast = (weeks) ->
     }
 
 getPreviousWeekDates = ->
-    previousWeekDates = @getWeekDatesInPast(1)
+    previousWeekDates = getWeekDatesInPast(1)
 
     return {
         previousWeek: previousWeekDates.weekInPast
