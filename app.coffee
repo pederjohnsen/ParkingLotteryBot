@@ -311,9 +311,10 @@ bot.startRTM (err, bot, payload) ->
             activeUsers = _(users).filter (user) -> user.status is 'ACTIVE'
 
             if activeUsers.length
+                text = "*There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery.*"
                 attachment =
-                    fallback: "There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery."
-                    text: "There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery."
+                    fallback: "#{activeUsers.join(', ')}."
+                    text: "#{activeUsers.join(', ')}."
                     color: 'good'
             else
                 attachment =
@@ -325,6 +326,9 @@ bot.startRTM (err, bot, payload) ->
             replyWithAttachments =
                 attachments: [attachment]
                 timestamp: message.ts
+
+            if text
+                replyWithAttachments.text = text
 
             bot.reply message, replyWithAttachments
 
