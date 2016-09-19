@@ -389,18 +389,29 @@ bot.startRTM (err, bot, payload) ->
                             return true
                         else
                             if data.currentWeekWinner and !data.currentWeekWinner.donated
+                                {previousWeek, previousYear} = getCurrentWeekDates()
                                 {currentWeek, currentYear} = getCurrentWeekDates()
 
+                                data.previousWeek = previousWeek
+                                data.previousYear = previousYear
                                 data.week = currentWeek
                                 data.year = currentYear
                             else if data.nextWeekWinner and !data.nextWeekWinner.donated
+                                {currentWeek, currentYear} = getCurrentWeekDates()
                                 {nextWeek, nextYear} = getNextWeekDates()
 
+                                data.previousWeek = currentWeek
+                                data.previousYear = currentYear
                                 data.week = nextWeek
                                 data.year = nextYear
 
-                            if !_(user.recentWins).findWhere({week: data.week, year: data.year})
-                                return true
+                            if _(user.recentWins).findWhere({week: data.previousWeek, year: data.previousYear})
+                                return false
+
+                            if _(user.recentWins).findWhere({week: data.week, year: data.year})
+                                return false
+
+                            return true
                     .value()
 
                 next null
@@ -462,7 +473,7 @@ bot.startRTM (err, bot, payload) ->
                 attachment =
                     fallback: "...and the lucky winner is...\n#{data.winner.userLink}."
                     title: "And the lucky winner is"
-                    text: ".\n#{data.winner.userLink}."
+                    text: "#{data.winner.userLink}."
                     color: 'good'
 
                 emoji = '+1::skin-tone-2'
