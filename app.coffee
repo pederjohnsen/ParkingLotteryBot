@@ -355,10 +355,19 @@ bot.startRTM (err, bot, payload) ->
             {currentWeek, currentYear} = getCurrentWeekDates()
             {nextWeek, nextYear} = getNextWeekDates()
 
-            data.currentWeekWinner = _(data.user.recentWins).findWhere({week: currentWeek, year: currentYear, donated: false})
-            data.nextWeekWinner = _(data.user.recentWins).findWhere({week: nextWeek, year: nextYear, donated: false})
+            data.currentWeekWinner = _(data.user.recentWins)
+                .chain()
+                .findWhere({week: currentWeek, year: currentYear})
+                .clone()
+                .value()
 
-            if !data.currentWeekWinner and !data.nextWeekWinner
+            data.nextWeekWinner = _(data.user.recentWins)
+                .chain()
+                .findWhere({week: nextWeek, year: nextYear})
+                .clone()
+                .value()
+
+            if (!data.currentWeekWinner or data.currentWeekWinner?.donated) and (!data.nextWeekWinner or data.nextWeekWinner?.donated)
                 return next new Error 'No wins on user that can be donated!'
                 
             next null
@@ -379,10 +388,14 @@ bot.startRTM (err, bot, payload) ->
                         if !user.recentWins.length
                             return true
                         else
-                            if data.currentWeekWinner
+                            if data.currentWeekWinner and !data.currentWeekWinner.donated
+                                {currentWeek, currentYear} = getCurrentWeekDates()
+
                                 data.week = currentWeek
                                 data.year = currentYear
-                            else if data.nextWeekWinner
+                            else if data.nextWeekWinner and !data.nextWeekWinner.donated
+                                {nextWeek, nextYear} = getNextWeekDates()
+
                                 data.week = nextWeek
                                 data.year = nextYear
 
@@ -396,14 +409,15 @@ bot.startRTM (err, bot, payload) ->
             if !data.eligibleUsers.length
                 return next new Error 'No eligible users!'
 
-            data.winner = _.sample(data.eligibleUsers, 1)
+            data.winner = _.sample(data.eligibleUsers, 1)?[0]
             next null
 
         setDonatedFlagOnDonatorWin = (next) ->
             newUser = _.clone(data.user)
-            winToUpdate = _(newUser).findWhere({week: data.week, year: data.year})
-            winIndex = _.indexOf(newUser, winToUpdate)
+            winToUpdate = _(newUser.recentWins).findWhere({week: data.week, year: data.year})
+            winIndex = _.indexOf(newUser.recentWins, winToUpdate)
             newUser.recentWins[winIndex].donated = data.winner.id
+
             controller.storage.users.save newUser, (err) ->
                 if err
                     bot.botkit.log('Error while updating win on user.', err)
@@ -412,7 +426,7 @@ bot.startRTM (err, bot, payload) ->
 
         saveWinOnUser = (next) ->
             newUser = _.clone(data.winner)
-            newUser.recentWins.push {week: nextWeek, year: nextYear, donated: true}
+            newUser.recentWins.push {week: data.week, year: data.year, donated: true}
             controller.storage.users.save newUser, (err) ->
                 if err
                     bot.botkit.log('Error while saving win on users.', err)
@@ -439,19 +453,19 @@ bot.startRTM (err, bot, payload) ->
 
                     emoji = 'suspect'
             else
-                if data.currentWeekWinner
+                if data.currentWeekWinner and !data.currentWeekWinner.donated
                     week = "this"
-                else if data.nextWeekWinner
+                else if data.nextWeekWinner and !data.nextWeekWinner.donated
                     week = "next"
 
                 text = "<!channel> Hello all! <@#{message.user}> just donated their parking space for #{week} week...."
                 attachment =
-                    fallback: "...and the lucky winner is...\n#{data.winner}."
+                    fallback: "...and the lucky winner is...\n#{data.winner.userLink}."
                     title: "And the lucky winner is"
-                    text: ".\n#{data.winner}."
+                    text: ".\n#{data.winner.userLink}."
                     color: 'good'
 
-                emoji = 'admission_tickets'
+                emoji = '+1::skin-tone-2'
 
             bot.api.reactions.add
                 timestamp: message.ts
