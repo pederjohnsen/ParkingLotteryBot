@@ -313,7 +313,7 @@ bot.startRTM (err, bot, payload) ->
                 .filter (user) ->
                     user.status is 'ACTIVE'
                 .pluck('username')
-                .value()>
+                .value()
 
             if activeUsers.length
                 text = "*There's #{activeUsers.length} #{if activeUsers.length isnt 1 then 'people' else 'person'} in the draw for the Parking Lottery.*"
