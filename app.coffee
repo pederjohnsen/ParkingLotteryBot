@@ -48,12 +48,10 @@ bot.startRTM (err, bot, payload) ->
 
     controller.hears ['\\bgive me a parking space\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         if message.user isnt 'U21BVLQAZ'
-            emoji = ':suspect:'
-
             bot.api.reactions.add
                 timestamp: message.ts
                 channel: message.channel
-                name: emoji
+                name: 'suspect'
             , (err, response) ->
                 if err
                     bot.botkit.log('Failed to add emoji reaction.', err)
@@ -61,19 +59,6 @@ bot.startRTM (err, bot, payload) ->
             bot.reply message, "I can't do that!"
         else
             data = {}
-
-            addReaction = (next) ->
-                emoji = ':innocent:'
-
-                bot.api.reactions.add
-                    timestamp: message.ts
-                    channel: message.channel
-                    name: emoji
-                , (err, response) ->
-                    if err
-                        bot.botkit.log('Failed to add emoji reaction.', err)
-
-                next null
 
             getRandomWinner = (next) ->
                 {currentWeek, currentYear} = getCurrentWeekDates()
@@ -85,15 +70,22 @@ bot.startRTM (err, bot, payload) ->
                     if !currentWinners.length
                         next new Error 'No winners.'
                     else
-                        data.randomWinner = _.sample(currentWinners, 1)
+                        data.randomWinner = _.sample(currentWinners, 1)?[0]
                         next null
 
             async.waterfall [
-                addReaction
                 getRandomWinner
             ], (err) ->
                 if err
                     bot.botkit.log('Error giving space.', err)
+
+                bot.api.reactions.add
+                    timestamp: message.ts
+                    channel: message.channel
+                    name: 'innocent'
+                , (err, response) ->
+                    if err
+                        bot.botkit.log('Failed to add emoji reaction.', err)
 
                 text = "*Sure <@#{message.user}>!*"
                 attachment =
