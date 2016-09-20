@@ -63,9 +63,16 @@ bot.startRTM (err, bot, payload) ->
             getRandomWinner = (next) ->
                 {currentWeek, currentYear} = getCurrentWeekDates()
 
-                getWinners currentWeek, currentYear, (err, currentWinners) ->
+                controller.storage.users.all (err, users) ->
                     if err
                         bot.botkit.log('Error getting users.', err)
+
+                    currentWinners = _(users)
+                        .chain()
+                        .filter (user) ->
+                            recentWin = _(user.recentWins).findWhere({week: currentWeek, year: currentYear})
+                            recentWin and (!recentWin.donated or recentWin.donated is true)
+                        .value()
 
                     if !currentWinners.length
                         next new Error 'No winners.'
