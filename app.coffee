@@ -47,7 +47,7 @@ bot.startRTM (err, bot, payload) ->
         bot.reply message, replyWithAttachments
 
     controller.hears ['\\bgive me a parking space\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        if message.user isnt 'U21BVLQAZ'
+        if message.user isnt 'U1XPZ8H46'
             bot.api.reactions.add
                 timestamp: message.ts
                 channel: message.channel
