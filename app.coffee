@@ -46,62 +46,6 @@ bot.startRTM (err, bot, payload) ->
 
         bot.reply message, replyWithAttachments
 
-    controller.hears ['\\bgive me a parking space\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        if message.user isnt 'U21BVLQAZ'
-            bot.api.reactions.add
-                timestamp: message.ts
-                channel: message.channel
-                name: 'suspect'
-            , (err, response) ->
-                if err
-                    bot.botkit.log('Failed to add emoji reaction.', err)
-
-            bot.reply message, "I can't do that!"
-        else
-            data = {}
-
-            getRandomWinner = (next) ->
-                {currentWeek, currentYear} = getCurrentWeekDates()
-
-                getWinners currentWeek, currentYear, (err, currentWinners) ->
-                    if err
-                        bot.botkit.log('Error getting users.', err)
-
-                    if !currentWinners.length
-                        next new Error 'No winners.'
-                    else
-                        data.randomWinner = _.sample(currentWinners, 1)?[0]
-                        next null
-
-            async.waterfall [
-                getRandomWinner
-            ], (err) ->
-                if err
-                    bot.botkit.log('Error giving space.', err)
-
-                bot.api.reactions.add
-                    timestamp: message.ts
-                    channel: message.channel
-                    name: 'innocent'
-                , (err, response) ->
-                    if err
-                        bot.botkit.log('Failed to add emoji reaction.', err)
-
-                text = "*Sure <@#{message.user}>!*"
-                attachment =
-                    fallback: "Here you go, have #{data.randomWinner.userLink}'s parking space!"
-                    text: "Here you go, have #{data.randomWinner.userLink}'s parking space!"
-                    color: 'good'
-
-                replyWithAttachments =
-                    attachments: [attachment]
-                    timestamp: message.ts
-
-                if text
-                    replyWithAttachments.text = text
-
-                bot.reply message, replyWithAttachments
-
     controller.hears ['\\bjoin\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
