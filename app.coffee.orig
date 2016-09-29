@@ -46,6 +46,8 @@ bot.startRTM (err, bot, payload) ->
 
         bot.reply message, replyWithAttachments
 
+<<<<<<< HEAD
+=======
     controller.hears ['\\bgive me a parking space\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         if message.user isnt 'U1XPZ8H46'
             bot.api.reactions.add
@@ -109,6 +111,7 @@ bot.startRTM (err, bot, payload) ->
 
                 bot.reply message, replyWithAttachments
 
+>>>>>>> 53d93255fde39ca5588695f2f7946967a7890805
     controller.hears ['\\bjoin\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
