@@ -650,20 +650,8 @@ draw = (message, cb) ->
                     if !user.recentWins.length
                         return true
                     else
-                        async.eachSeries _.range(config.weeksBetweenWins), (week, cb) ->
-                            {weekInPast, yearInPast} = getWeekDatesInPast(week)
+                        return isUserEligible(user)
 
-                            if _(user.recentWins).findWhere({week: weekInPast, year: yearInPast})
-                                return cb new Error 'User recently won.'
-
-                            cb null
-
-                        , (err) ->
-                            if err
-                                bot.botkit.log('User not eligible.', err)
-                                return false
-
-                            return true
                 .value()
 
             next null
@@ -699,6 +687,17 @@ draw = (message, cb) ->
             cb err
         else
             cb null, _(data.winners).pluck('userLink')
+
+isUserEligible = (user) ->
+    for week in _.range(config.weeksBetweenWins)
+        {weekInPast, yearInPast} = getWeekDatesInPast(week)
+
+        if _(user.recentWins).findWhere({week: weekInPast, year: yearInPast})
+            err = new Error 'User recently won.'
+            bot.botkit.log('User not eligible.', err)
+            return false
+
+    return true
 
 saveDraw = (message, cb) ->
     {nextWeek, nextYear} = getNextWeekDates()
