@@ -18,6 +18,7 @@ bot.startRTM (err, bot, payload) ->
     if err
         throw new Error 'Could not connect to Slack'
 
+    # If the bot hears "hello" or "hi" it greets the user back
     controller.hears ['\\bhello\\b', '\\bhi\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         controller.storage.users.get message.user, (err, user) ->
             if err
@@ -28,6 +29,7 @@ bot.startRTM (err, bot, payload) ->
             else
                 bot.reply message, 'Hello!'
 
+    # If the bot hears "help" or "info" it replies with an info message
     controller.hears ['\\bhelp\\b', '\\binfo\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         messages = [
             "You can join by typing 'join @parkinglottery' & leave by typing 'leave @parkinglottery'."
@@ -46,6 +48,7 @@ bot.startRTM (err, bot, payload) ->
 
         bot.reply message, replyWithAttachments
 
+    # If the bot hears "join" start a conversation to register REG number of the users vehicle.
     controller.hears ['\\bjoin\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
@@ -128,6 +131,7 @@ bot.startRTM (err, bot, payload) ->
 
                 bot.reply message, replyWithAttachments
 
+    # If the bot hears "leave" it removes the user from the draw
     controller.hears ['\\bleave\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         data = {}
 
@@ -215,6 +219,7 @@ bot.startRTM (err, bot, payload) ->
 
                 bot.reply message, replyWithAttachments
 
+    # If the bot hears "last", "previous", "last week", "previous week" it shows a list of the previous weeks winners
     controller.hears ['\\blast\\b', '\\bprevious\\b', '\\blast week\\b', '\\bprevious week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {previousWeek, previousYear} = getPreviousWeekDates()
 
@@ -244,7 +249,7 @@ bot.startRTM (err, bot, payload) ->
 
             bot.reply message, replyWithAttachments
 
-
+    # If the bot hears "current", "current week", "this week" it shows a list of the current weeks winners
     controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {currentWeek, currentYear} = getCurrentWeekDates()
 
@@ -274,6 +279,7 @@ bot.startRTM (err, bot, payload) ->
 
             bot.reply message, replyWithAttachments
 
+    # If the bot hears "next", "next week", "upcoming", "upcoming week" it shows a list of the upcoming weeks winners
     controller.hears ['\\bnext\\b', '\\bnext week\\b', '\\bupcoming\\b', '\\bupcoming week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
@@ -303,6 +309,7 @@ bot.startRTM (err, bot, payload) ->
 
             bot.reply message, replyWithAttachments
 
+    # If the bot hears "list", "users" it lists all users currently in the draw
     controller.hears ['\\blist\\b', '\\busers\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
         controller.storage.users.all (err, users) ->
             if err
@@ -337,6 +344,7 @@ bot.startRTM (err, bot, payload) ->
 
             bot.reply message, replyWithAttachments
 
+    # If the bot hears "donate" it will donate the users parking space if they've won one for the current/upcoming week
     controller.hears ['\\bdonate\\b'], 'direct_mention,mention', (bot, message) ->
         data = {}
 
@@ -492,6 +500,7 @@ bot.startRTM (err, bot, payload) ->
 
             bot.reply message, replyWithAttachments
 
+    # If the bot hears "draw", it will draw winners for the upcoming week if not already drawn
     controller.hears ['\\bdraw\\b'], 'direct_mention,mention', (bot, message) ->
         {nextWeek, nextYear} = getNextWeekDates()
 
@@ -782,4 +791,4 @@ getNextWeekDates = ->
     return {
         nextWeek: moment().add(1, 'week').week()
         nextYear: moment().add(1, 'week').year()
-    }
+    }    
