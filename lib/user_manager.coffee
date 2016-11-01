@@ -1,18 +1,21 @@
+PBError = require('user-error')
+
 module.exports = class UserManager
 
-    UserManager.new = (options) -> new UserManager options
+    UserManager.new = (configuration) -> new UserManager configuration
 
-    constructor: (options) ->
-        throw new Error 'controller is null or undefined' if not options?.controller?
-        throw new Error 'bot is null or undefined' if not options?.bot?
+    constructor: (configuration) ->
+        throw new Error 'controller is null or undefined' if not configuration?.controller?
+        throw new Error 'bot is null or undefined' if not configuration?.bot?
 
-        @controller = controller
-        @bot = bot
+        @controller = configuration.controller
+        @bot = configuration.bot
 
     getLocalUser: (opts, cb) ->
         @controller.storage.users.get opts.user, (err, user) ->
             if err
                 @bot.botkit.log('Failed to get local user data.', err)
+                return cb new PBError('Failed to get local user data.', {cause: err})
 
             cb null, user
 
@@ -21,7 +24,8 @@ module.exports = class UserManager
             user: opts.user
         , (err, response) ->
             if err
-                @bot.botkit.log('Failted to get user data from slack.', err)
+                @bot.botkit.log('Failed to get user data from slack.', err)
+                return cb new PBError('Failed to get user data from slack.', {cause: err})
 
             user =
                 id: opts.user
@@ -54,6 +58,9 @@ module.exports = class UserManager
                 if err
                     return next err
 
+                if !err and !user
+                    return next new PBError('No slack user.', {code: 'NO_SLACK_USER'})
+
                 data.user = user
 
         saveUser = (next) =>
@@ -68,4 +75,12 @@ module.exports = class UserManager
                     recentWins: []
                 , (err) ->
                     if err
-                        return cb err
+                        return next err
+
+                    next null
+
+        async.waterfall [
+            getSlackUser
+            saveUser
+        ], (err) ->
+            cb err

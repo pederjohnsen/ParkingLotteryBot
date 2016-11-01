@@ -2,8 +2,11 @@ _ = require('underscore')
 moment = require('moment')
 async = require('async')
 Botkit = require('botkit')
+PBError = require('user-error')
 
 config = require('./config')
+
+UserManager = require('./lib/user_manager')
 
 controller = Botkit.slackbot(
     debug: config.debug
@@ -13,6 +16,8 @@ controller = Botkit.slackbot(
 bot = controller.spawn(
     token: config.slackBotToken
 )
+
+configuration = {controller: controller, bot: bot}
 
 bot.startRTM (err, bot, payload) ->
     if err
@@ -53,51 +58,59 @@ bot.startRTM (err, bot, payload) ->
         data = {}
 
         getUser = (next) ->
-            controller.storage.users.get message.user, (err, user) ->
+            UserManager.new(configuration).getLocalUser {user: message.user}, (err, user) ->
                 if err
                     bot.botkit.log('Failed to get user data.', err)
+                    return next new PBError('Failed to get user data.', {cause: err})
+
+                if !err and !user
+                    return next new PBError('No local user.', {code: 'NO_LOCAL_USER'})
 
                 data.user = user
                 next null
 
         addUserIfNotAdded = (next) ->
-            if data.user?.status is 'ACTIVE'
-                return next null
+            if data.user.status is 'ACTIVE'
+                return next new PBError('User already joined and active.', {code: 'USER_ALREADY_JOINED'})
 
-            bot.api.users.info
-                user: message.user
-            , (err, response) ->
+            UserManager.new(configuration).addUserFromSlack {user: message.user}, (err) ->
                 if err
-                    return next err
+                    return next new PBError('Failed to add user from slack users.', {cause: err})
 
-                controller.storage.users.save
-                    id: data.user?.id or message.user
-                    status: 'ACTIVE'
-                    username: data.user?.username or response.user.name
-                    realName: data.user?.realName or response.user.real_name
-                    userLink: data.user?.userLink or "<@#{message.user}|#{response.user.name}>"
-                    recentWins: data.user?.recentWins or []
-                , (err) ->
-                    if err
-                        return next err
-
-                    next null
+                next null
 
         async.waterfall [
             getUser
             addUserIfNotAdded
         ], (err) ->
-            if err
+            if err and err?.code is 'USER_ALREADY_JOINED'
+                attachment =
+                    fallback: "You've already joined the Parking Lottery!"
+                    text: "You've already joined the Parking Lottery!"
+                    color: 'warning'
+
+                emoji = 'suspect'
+
+                bot.api.reactions.add
+                    timestamp: message.ts
+                    channel: message.channel
+                    name: emoji
+                , (err, response) ->
+                    if err
+                        bot.botkit.log('Failed to add emoji reaction.', err)
+
+                replyWithAttachments =
+                    attachments: [attachment]
+                    timestamp: message.ts
+
+                if text
+                    replyWithAttachments.text = text
+
+                bot.reply message, replyWithAttachments
+            else if err
                 bot.botkit.log('Failed to add user to parking lottery.', err)
             else
-                if data.user?.status is 'ACTIVE'
-                    attachment =
-                        fallback: "You've already joined the Parking Lottery!"
-                        text: "You've already joined the Parking Lottery!"
-                        color: 'warning'
-
-                    emoji = 'suspect'
-                else if data.user?.status is 'INACTIVE'
+                if data.user.status is 'INACTIVE'
                     text = "*Welcome back to the Parking Lottery <@#{message.user}>!*"
                     attachment =
                         fallback: "You'll be automatically entered to win a parking space every week."
