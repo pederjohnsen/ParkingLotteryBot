@@ -1,6 +1,6 @@
 PBError = require('user-error')
 
-config = require('./config')
+config = require('../config')
 
 module.exports = class UserManager
 
