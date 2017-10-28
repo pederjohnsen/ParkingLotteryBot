@@ -1,12 +1,8 @@
 node_modules
-env.sh
 data
 
 # Ignore all JS
 *.js
-
-# nodemon lockfile
-.monitor
 
 # Ignore Mac .DS_Store files
 *.DS_Store
