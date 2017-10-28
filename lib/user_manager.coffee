@@ -1,5 +1,7 @@
 PBError = require('user-error')
 
+config = require('./config')
+
 module.exports = class UserManager
 
     UserManager.new = (configuration) -> new UserManager configuration
@@ -14,15 +16,18 @@ module.exports = class UserManager
     getLocalUser: (opts, cb) ->
         @controller.storage.users.get opts.user, (err, user) ->
             if err
-                @bot.botkit.log('Failed to get local user data.', err)
                 return cb new PBError('Failed to get local user data.', {cause: err})
 
             cb null, user
+            
+    getLocalUsers: (opts, cb) ->
+        @controller.storage.users.all (err, users) ->
+            cb err, users
 
     getSlackUser: (opts, cb) ->
         @bot.api.users.info
             user: opts.user
-        , (err, response) ->
+        , (err, response) =>
             if err
                 @bot.botkit.log('Failed to get user data from slack.', err)
                 return cb new PBError('Failed to get user data from slack.', {cause: err})
@@ -64,23 +69,44 @@ module.exports = class UserManager
                 data.user = user
 
         saveUser = (next) =>
-            @saveUser
-                @controller.storage.users.save
-                    id: opts.user
-                    status: 'ACTIVE'
-                    username: data.user.name
-                    realName: data.user.real_name
-                    userLink: "<@#{opts.user}|#{data.user.name}>"
-                    reg: opts.reg
-                    recentWins: []
-                , (err) ->
-                    if err
-                        return next err
+            @controller.storage.users.save
+                id: opts.user
+                status: 'ACTIVE'
+                username: data.user.name
+                realName: data.user.real_name
+                userLink: "<@#{opts.user}|#{data.user.name}>"
+                reg: opts.reg
+                recentWins: []
+            , (err) ->
+                if err
+                    return next err
 
-                    next null
+                next null
 
         async.waterfall [
             getSlackUser
             saveUser
         ], (err) ->
             cb err
+            
+
+    getWinners: (week, year, cb) ->
+        @getLocalUsers (err, users) ->
+            if err
+                @bot.botkit.log('Error getting users.', err)
+
+            winners = _(users)
+                .chain()
+                .filter (user) ->
+                    recentWin = _(user.recentWins).findWhere({week: week, year: year})
+                    recentWin and recentWin.donated isnt true
+                .map (user) ->
+                    recentWin = _(user.recentWins).findWhere({week: week, year: year})
+                    if recentWin.donated
+                        donatedWinUser = _(users).findWhere({id: recentWin.donated})
+                        return "#{donatedWinUser.userLink} donated by: #{user.userLink}"
+                    else
+                        return user.userLink
+                .value()
+
+            cb null, winners

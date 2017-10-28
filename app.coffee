@@ -1,12 +1,12 @@
 _ = require('underscore')
-moment = require('moment')
 async = require('async')
 Botkit = require('botkit')
 PBError = require('user-error')
 
 config = require('./config')
-
+TeamManager = require('./lib/team_manager')
 UserManager = require('./lib/user_manager')
+util = require('./lib/util')
 
 controller = Botkit.slackbot(
     debug: config.debug
@@ -19,20 +19,23 @@ bot = controller.spawn(
 
 configuration = {controller: controller, bot: bot}
 
+teamManager = TeamManager.new(configuration)
+userManager = UserManager.new(configuration)
+
 bot.startRTM (err, bot, payload) ->
     if err
         throw new Error 'Could not connect to Slack'
 
     # If the bot hears "hello" or "hi" it greets the user back
     controller.hears ['\\bhello\\b', '\\bhi\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        controller.storage.users.get message.user, (err, user) ->
+        userManager.getLocalUser {user: message.user}, (err, user) ->
             if err
                 bot.botkit.log('Failed to get user data.', err)
 
-            if user
-                bot.reply message, "Hello #{user.userLink}!"
-            else
+            if !err and !user
                 bot.reply message, 'Hello!'
+            else
+                bot.reply message, "Hello #{user.userLink}!"
 
     # If the bot hears "help" or "info" it replies with an info message
     controller.hears ['\\bhelp\\b', '\\binfo\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
@@ -58,7 +61,7 @@ bot.startRTM (err, bot, payload) ->
         data = {}
 
         getUser = (next) ->
-            UserManager.new(configuration).getLocalUser {user: message.user}, (err, user) ->
+            userManager.getLocalUser {user: message.user}, (err, user) ->
                 if err
                     bot.botkit.log('Failed to get user data.', err)
                     return next new PBError('Failed to get user data.', {cause: err})
@@ -73,7 +76,7 @@ bot.startRTM (err, bot, payload) ->
             if data.user.status is 'ACTIVE'
                 return next new PBError('User already joined and active.', {code: 'USER_ALREADY_JOINED'})
 
-            UserManager.new(configuration).addUserFromSlack {user: message.user}, (err) ->
+            userManager.addUserFromSlack {user: message.user}, (err) ->
                 if err
                     return next new PBError('Failed to add user from slack users.', {cause: err})
 
@@ -149,7 +152,7 @@ bot.startRTM (err, bot, payload) ->
         data = {}
 
         getUser = (next) ->
-            controller.storage.users.get message.user, (err, user) ->
+            userManager.getLocalUser {user: message.user}, (err, user) ->
                 if err
                     bot.botkit.log('Failed to get user data.', err)
 
@@ -186,7 +189,7 @@ bot.startRTM (err, bot, payload) ->
 
             newUser = _.clone(data.user)
             newUser.status = 'INACTIVE'
-            controller.storage.users.save newUser, (err) ->
+            userManager.saveUser newUser, (err) ->
                 if err
                     return next err
 
@@ -234,9 +237,9 @@ bot.startRTM (err, bot, payload) ->
 
     # If the bot hears "last", "previous", "last week", "previous week" it shows a list of the previous weeks winners
     controller.hears ['\\blast\\b', '\\bprevious\\b', '\\blast week\\b', '\\bprevious week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        {previousWeek, previousYear} = getPreviousWeekDates()
+        {previousWeek, previousYear} = util.getPreviousWeekDates()
 
-        getWinners previousWeek, previousYear, (err, previousWinners) ->
+        userManager.getWinners previousWeek, previousYear, (err, previousWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -264,9 +267,9 @@ bot.startRTM (err, bot, payload) ->
 
     # If the bot hears "current", "current week", "this week" it shows a list of the current weeks winners
     controller.hears ['\\bcurrent\\b', '\\bcurrent week\\b', '\\bthis week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        {currentWeek, currentYear} = getCurrentWeekDates()
+        {currentWeek, currentYear} = util.getCurrentWeekDates()
 
-        getWinners currentWeek, currentYear, (err, currentWinners) ->
+        userManager.getWinners currentWeek, currentYear, (err, currentWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -294,9 +297,9 @@ bot.startRTM (err, bot, payload) ->
 
     # If the bot hears "next", "next week", "upcoming", "upcoming week" it shows a list of the upcoming weeks winners
     controller.hears ['\\bnext\\b', '\\bnext week\\b', '\\bupcoming\\b', '\\bupcoming week\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        {nextWeek, nextYear} = getNextWeekDates()
+        {nextWeek, nextYear} = util.getNextWeekDates()
 
-        getWinners nextWeek, nextYear, (err, upcomingWinners) ->
+        userManager.getWinners nextWeek, nextYear, (err, upcomingWinners) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -324,7 +327,7 @@ bot.startRTM (err, bot, payload) ->
 
     # If the bot hears "list", "users" it lists all users currently in the draw
     controller.hears ['\\blist\\b', '\\busers\\b'], 'direct_message,direct_mention,mention', (bot, message) ->
-        controller.storage.users.all (err, users) ->
+        userManager.getLocalUsers (err, users) ->
             if err
                 bot.botkit.log('Error getting users.', err)
 
@@ -362,7 +365,7 @@ bot.startRTM (err, bot, payload) ->
         data = {}
 
         getDonator = (next) ->
-            controller.storage.users.get message.user, (err, user) ->
+            userManager.getLocalUser message.user, (err, user) ->
                 if err
                     bot.botkit.log('Failed to get user data.', err)
 
@@ -373,8 +376,8 @@ bot.startRTM (err, bot, payload) ->
             if !data.user
                 return next new Error 'No user data.'
 
-            {currentWeek, currentYear} = getCurrentWeekDates()
-            {nextWeek, nextYear} = getNextWeekDates()
+            {currentWeek, currentYear} = util.getCurrentWeekDates()
+            {nextWeek, nextYear} = util.getNextWeekDates()
 
             data.currentWeekWinner = _(data.user.recentWins)
                 .chain()
@@ -394,7 +397,7 @@ bot.startRTM (err, bot, payload) ->
             next null
 
         getEligibleUsers = (next) ->
-            controller.storage.users.all (err, users) ->
+            userManager.getLocalUsers (err, users) ->
                 if err
                     return next err
 
@@ -410,16 +413,16 @@ bot.startRTM (err, bot, payload) ->
                             return true
                         else
                             if data.currentWeekWinner and !data.currentWeekWinner.donated
-                                {previousWeek, previousYear} = getCurrentWeekDates()
-                                {currentWeek, currentYear} = getCurrentWeekDates()
+                                {previousWeek, previousYear} = util.getCurrentWeekDates()
+                                {currentWeek, currentYear} = util.getCurrentWeekDates()
 
                                 data.previousWeek = previousWeek
                                 data.previousYear = previousYear
                                 data.week = currentWeek
                                 data.year = currentYear
                             else if data.nextWeekWinner and !data.nextWeekWinner.donated
-                                {currentWeek, currentYear} = getCurrentWeekDates()
-                                {nextWeek, nextYear} = getNextWeekDates()
+                                {currentWeek, currentYear} = util.getCurrentWeekDates()
+                                {nextWeek, nextYear} = util.getNextWeekDates()
 
                                 data.previousWeek = currentWeek
                                 data.previousYear = currentYear
@@ -450,7 +453,7 @@ bot.startRTM (err, bot, payload) ->
             winIndex = _.indexOf(newUser.recentWins, winToUpdate)
             newUser.recentWins[winIndex].donated = data.winner.id
 
-            controller.storage.users.save newUser, (err) ->
+            userManager.saveUser newUser, (err) ->
                 if err
                     bot.botkit.log('Error while updating win on user.', err)
 
@@ -459,7 +462,7 @@ bot.startRTM (err, bot, payload) ->
         saveWinOnUser = (next) ->
             newUser = _.clone(data.winner)
             newUser.recentWins.push {week: data.week, year: data.year, donated: true}
-            controller.storage.users.save newUser, (err) ->
+            userManager.saveUser newUser, (err) ->
                 if err
                     bot.botkit.log('Error while saving win on users.', err)
                     # TODO: remove donated flag on user donating win as unable to save win on user
@@ -515,13 +518,13 @@ bot.startRTM (err, bot, payload) ->
 
     # If the bot hears "draw", it will draw winners for the upcoming week if not already drawn
     controller.hears ['\\bdraw\\b'], 'direct_mention,mention', (bot, message) ->
-        {nextWeek, nextYear} = getNextWeekDates()
+        {nextWeek, nextYear} = util.getNextWeekDates()
 
         data = {}
         data.alreadyDrawn = false
 
         getCallerUser = (next) ->
-            controller.storage.users.get message.user, (err, user) ->
+            userManager.getLocalUser message.user, (err, user) ->
                 if err
                     bot.botkit.log('Failed to get user data.', err)
 
@@ -547,13 +550,13 @@ bot.startRTM (err, bot, payload) ->
                 next null
 
         checkCallerIsAdmin = (next) ->
-            if data.user.username not in config.admins
+            if userManager.isUserAdmin(data.user.username)
                 return next new Error 'Not admin user!'
 
             next null
 
         checkIfDrawIsRequired = (next) ->
-            controller.storage.teams.get message.team, (err, team) ->
+            teamManager.getLocalTeam message.team, (err, team) ->
                 if err
                     bot.botkit.log('Failed to get team data.', err)
 
@@ -593,7 +596,7 @@ bot.startRTM (err, bot, payload) ->
             if err
                 bot.botkit.log('Failed to draw winners.', err)
 
-                if data.user.username not in config.admins
+                if !userManager.isUserAdmin(data.user.username)
                     attachment =
                         fallback: "<@#{message.user}>: You're not an admin!"
                         text: "<@#{message.user}>: You're not an admin!"
@@ -652,12 +655,12 @@ bot.startRTM (err, bot, payload) ->
             bot.reply message, replyWithAttachments
 
 draw = (message, cb) ->
-    {nextWeek, nextYear} = getNextWeekDates()
+    {nextWeek, nextYear} = util.getNextWeekDates()
 
     data = {}
 
     getEligibleUsers = (next) ->
-        controller.storage.users.all (err, users) ->
+        userManager.getLocalUsers (err, users) ->
             if err
                 return next err
 
@@ -689,7 +692,7 @@ draw = (message, cb) ->
         async.eachSeries data.winners, (user, cb) ->
             newUser = _.clone(user)
             newUser.recentWins.push {week: nextWeek, year: nextYear}
-            controller.storage.users.save newUser, (err) ->
+            userManager.saveUser newUser, (err) ->
                 if err
                     return cb err
 
@@ -712,7 +715,7 @@ draw = (message, cb) ->
 
 isUserEligible = (user) ->
     for week in _.range(config.weeksBetweenWins)
-        {weekInPast, yearInPast} = getWeekDatesInPast(week)
+        {weekInPast, yearInPast} = util.getWeekDatesInPast(week)
 
         if _(user.recentWins).findWhere({week: weekInPast, year: yearInPast})
             err = new Error 'User recently won.'
@@ -722,12 +725,12 @@ isUserEligible = (user) ->
     return true
 
 saveDraw = (message, cb) ->
-    {nextWeek, nextYear} = getNextWeekDates()
+    {nextWeek, nextYear} = util.getNextWeekDates()
 
     data = {}
 
     getTeamData = (next) ->
-        controller.storage.teams.get message.team, (err, team) ->
+        teamManager.getLocalTeam message.team, (err, team) ->
             if err
                 bot.botkit.log('Failed to get team data.', err)
 
@@ -744,7 +747,7 @@ saveDraw = (message, cb) ->
 
         newTeamData.draws.push {week: nextWeek, year: nextYear}
 
-        controller.storage.teams.save newTeamData, (err) ->
+        teamManager.saveTeam newTeamData, (err) ->
             if err
                 bot.botkit.log('Error while saving draw on team.', err)
 
@@ -758,50 +761,3 @@ saveDraw = (message, cb) ->
             cb err
         else
             cb null
-
-getWinners = (week, year, cb) ->
-    controller.storage.users.all (err, users) ->
-        if err
-            bot.botkit.log('Error getting users.', err)
-
-        winners = _(users)
-            .chain()
-            .filter (user) ->
-                recentWin = _(user.recentWins).findWhere({week: week, year: year})
-                recentWin and recentWin.donated isnt true
-            .map (user) ->
-                recentWin = _(user.recentWins).findWhere({week: week, year: year})
-                if recentWin.donated
-                    donatedWinUser = _(users).findWhere({id: recentWin.donated})
-                    return "#{donatedWinUser.userLink} donated by: #{user.userLink}"
-                else
-                    return user.userLink
-            .value()
-
-        cb null, winners
-
-getWeekDatesInPast = (weeks) ->
-    return {
-        weekInPast: moment().subtract(weeks, 'week').week()
-        yearInPast: moment().subtract(weeks, 'week').year()
-    }
-
-getPreviousWeekDates = ->
-    previousWeekDates = getWeekDatesInPast(1)
-
-    return {
-        previousWeek: previousWeekDates.weekInPast
-        previousYear: previousWeekDates.yearInPast
-    }
-
-getCurrentWeekDates = ->
-    return {
-        currentWeek: moment().week()
-        currentYear: moment().year()
-    }
-
-getNextWeekDates = ->
-    return {
-        nextWeek: moment().add(1, 'week').week()
-        nextYear: moment().add(1, 'week').year()
-    }    
